@@ -7,8 +7,47 @@ const noteCount = document.querySelector("#note-count");
 const errorMessage = document.querySelector("#error-message");
 const searchInput = document.querySelector("#search-input");
 
+// Load saved notes from localStorage
+function loadNotes() {
+    try {
+        const savedNotes = localStorage.getItem("quicknotes");
+
+        if (savedNotes) {
+            const parsedNotes = JSON.parse(savedNotes);
+
+            if (Array.isArray(parsedNotes)) {
+                return parsedNotes.filter(function (note) {
+                    return (
+                        note &&
+                        typeof note.id === "string" &&
+                        typeof note.text === "string" &&
+                        typeof note.category === "string" &&
+                        ["personal", "work", "study"].includes(note.category) &&
+                        typeof note.createdAt === "string"
+                    );
+                });
+            }
+        }
+    } catch (error) {
+        console.error("Could not load saved notes:", error);
+    }
+
+    return [];
+}
+
 // Store notes in an array
-let notes = [];
+let notes = loadNotes();
+
+// Save notes to localStorage
+function saveNotes() {
+    try {
+        localStorage.setItem("quicknotes", JSON.stringify(notes));
+    } catch (error) {
+        console.error("Could not save notes:", error);
+        errorMessage.textContent =
+            "Your notes could not be saved in this browser.";
+    }
+}
 
 // Display the correct note count
 function updateNoteCount() {
@@ -38,31 +77,26 @@ function render() {
     }
 
     filteredNotes.forEach(function (note) {
-        // Create the note card
         const listItem = document.createElement("li");
         listItem.classList.add(
             "note-card",
             `category-${note.category}`
         );
 
-        // Create note text
         const text = document.createElement("p");
         text.classList.add("note-text");
         text.textContent = note.text;
 
-        // Create category label
         const category = document.createElement("span");
         category.classList.add("note-category");
         category.textContent =
             note.category.charAt(0).toUpperCase() +
             note.category.slice(1);
 
-        // Create date and time
         const date = document.createElement("small");
         date.classList.add("note-date");
         date.textContent = note.createdAt;
 
-        // Create Delete button
         const deleteButton = document.createElement("button");
         deleteButton.type = "button";
         deleteButton.classList.add("delete-button");
@@ -73,10 +107,10 @@ function render() {
                 return item.id !== note.id;
             });
 
+            saveNotes();
             render();
         });
 
-        // Add elements to the note card
         listItem.appendChild(text);
         listItem.appendChild(category);
         listItem.appendChild(date);
@@ -94,20 +128,17 @@ noteForm.addEventListener("submit", function (event) {
 
     const text = noteInput.value.trim();
 
-    // Validate empty notes
     if (text === "") {
         errorMessage.textContent = "Please type a note first.";
         return;
     }
 
-    // Validate note length
     if (text.length > 200) {
         errorMessage.textContent =
             "Notes must be 200 characters or fewer.";
         return;
     }
 
-    // Create the note object
     const newNote = {
         id: Date.now().toString() + Math.random().toString(36).slice(2),
         text: text,
@@ -115,14 +146,13 @@ noteForm.addEventListener("submit", function (event) {
         createdAt: new Date().toLocaleString()
     };
 
-    // Add note to the array
     notes.push(newNote);
 
-    // Clear the input and error message
+    saveNotes();
+
     noteInput.value = "";
     errorMessage.textContent = "";
 
-    // Refresh the displayed notes
     render();
 });
 
@@ -131,6 +161,5 @@ searchInput.addEventListener("input", function () {
     render();
 });
 
-// Display the initial page
+// Display saved notes when the page opens
 render();
-
